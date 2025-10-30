@@ -42,9 +42,9 @@ if st.button("Analisar"):
         st.markdown(f"""
         ### 🔢 Totais
         - **Total geral:** {total}
-        - 👨 Homens: {total_homens}
-        - 👩 Mulheres: {total_mulheres}
-        - ❓ Indeterminados: {total_indeterminado}
+        - 👨 Homens: {total_homens} ({(total_homens / total) * 100:.2f}%)
+        - 👩 Mulheres: {total_mulheres} ({(total_mulheres / total) * 100:.2f}%)
+        - ❓ Indeterminados: {total_indeterminado} ({(total_indeterminado / total) * 100:.2f}%)
         """)
 
         # Download XLSX
