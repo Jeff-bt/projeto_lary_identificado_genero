@@ -12,20 +12,44 @@ st.title("👤 Analisador de Gênero por Username")
 
 st.write("Insira uma lista de usernames separados por vírgula para analisar:")
 
+plataforma = st.selectbox("Escolha a plataforma:", ["Instagram", "TikTok"])
+
 # Input dos usernames
 usernames_input = st.text_area("Usernames", placeholder="Ex: kipper.dev, lucasluc25, ramon.pelle")
+
+if usernames_input.strip():
+    # Quebra por vírgula e remove espaços extras
+    raw_list = [u.strip() for u in usernames_input.split(",") if u.strip()]
+
+    # Remove duplicados mantendo a ordem
+    unique_list = []
+    for u in raw_list:
+        if u not in unique_list:
+            unique_list.append(u)
+
+    # Calcula os totais
+    total = len(raw_list)
+    total_unicos = len(unique_list)
+    repetidos = total - total_unicos
+
+    # Mostra os resultados
+    st.markdown(f"**📋 Total digitado:** {total}  **🔁 Repetidos:** {repetidos}  **✅ Sem repetidos:** {total_unicos}")
 
 # Processar usernames
 if st.button("Analisar"):
     if usernames_input.strip() == "":
         st.warning("Por favor, insira ao menos um username.")
     else:
-        list_username = [u.strip() for u in usernames_input.split(",") if u.strip()]
+        list_username = list(set([u.strip() for u in usernames_input.split(",") if u.strip()]))
 
-        usernames_dict = {username: f"https://www.instagram.com/{username}/" for username in list_username}
+        if plataforma == "Instagram":
+            usernames_dict = {u: f"https://www.instagram.com/{u}/" for u in list_username}
+        else:  # TikTok
+            usernames_dict = {u: f"https://www.tiktok.com/@{u}" for u in list_username}
+
         print(usernames_dict)
 
-        response = agent.run(input=str(list_username))
+        response = agent.run(input=str(f"é: {plataforma} {list_username}"))
 
         df = pd.DataFrame(json.loads(response.content))
 
