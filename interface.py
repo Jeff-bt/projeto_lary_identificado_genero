@@ -33,7 +33,7 @@ if usernames_input.strip():
     repetidos = total - total_unicos
 
     # Mostra os resultados
-    st.markdown(f"**📋 Total digitado:** {total}  **🔁 Repetidos:** {repetidos}  **✅ Sem repetidos:** {total_unicos}")
+    st.markdown(f"**📋 Lista total:** {total}  **🔁 Repetidos:** {repetidos}  **✅ Lista total SEM repetidos:** {total_unicos}")
 
 # Processar usernames
 if st.button("Analisar"):
