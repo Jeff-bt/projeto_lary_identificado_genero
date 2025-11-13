@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from io import BytesIO
-from lary_agent import agent
+from lary_agent import criar_agent
 from dotenv import load_dotenv
 import json
 load_dotenv()
@@ -10,48 +10,92 @@ st.set_page_config(page_title="Analisador de Gênero", page_icon="👤", layout=
 
 st.title("👤 Analisador de Gênero por Username")
 
-st.write("Insira uma lista de usernames separados por vírgula para analisar:")
+# Escolha do modelo
+modelo_escolhido = st.selectbox(
+    "Modelo de IA",
+    [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "llama-3.1-8b-instant",
+        "llama-3.3-70b-versatile",
+        "meta-llama/llama-guard-4-12b"
+    ]
+)
 
+# Escolha da plataforma
 plataforma = st.selectbox("Escolha a plataforma:", ["Instagram", "TikTok"])
 
 # Input dos usernames
-usernames_input = st.text_area("Usernames", placeholder="Ex: kipper.dev, lucasluc25, ramon.pelle")
+usernames_input = st.text_area(
+    "Lista nomes de perfis",
+    placeholder="Ex: kipper.dev, lucasluc25, ramon.pelle"
+)
 
+st.write("Insira uma lista de nomes de perfis separados por vírgula para analisar")
+
+# Pré-processamento e contagem
 if usernames_input.strip():
-    # Quebra por vírgula e remove espaços extras
+    # Separar por vírgula e remover espaços
     raw_list = [u.strip() for u in usernames_input.split(",") if u.strip()]
-
-    # Remove duplicados mantendo a ordem
+    # Remover múltiplos espaços internos
+    clean_list = [' '.join(u.split()) for u in raw_list]
+    # Remover duplicados mantendo ordem
     unique_list = []
-    for u in raw_list:
+    for u in clean_list:
         if u not in unique_list:
             unique_list.append(u)
-
-    # Calcula os totais
     total = len(raw_list)
     total_unicos = len(unique_list)
     repetidos = total - total_unicos
-
-    # Mostra os resultados
-    st.markdown(f"**📋 Lista total:** {total}  **🔁 Repetidos:** {repetidos}  **✅ Lista total SEM repetidos:** {total_unicos}")
+    st.markdown(
+        f"**📋 Lista total:** {total}  "
+        f"**🔁 Repetidos:** {repetidos}  "
+        f"**✅ Lista total SEM repetidos:** {total_unicos}"
+    )
 
 # Processar usernames
 if st.button("Analisar"):
-    if usernames_input.strip() == "":
+    if not usernames_input.strip():
         st.warning("Por favor, insira ao menos um username.")
     else:
-        list_username = list(set([u.strip() for u in usernames_input.split(",") if u.strip()]))
+        # 1️⃣ Separar por vírgula e limpar nomes
+        raw_list = [u.strip() for u in usernames_input.split(",") if u.strip()]
+        clean_list = [' '.join(u.split()) for u in raw_list]
 
+        # 2️⃣ Remover duplicados mantendo a ordem
+        list_username = []
+        for u in clean_list:
+            if u not in list_username:
+                list_username.append(u)
+
+        # Criar dicionário username → link
         if plataforma == "Instagram":
             usernames_dict = {u: f"https://www.instagram.com/{u}/" for u in list_username}
-        else:  # TikTok
+        else:
             usernames_dict = {u: f"https://www.tiktok.com/@{u}" for u in list_username}
 
-        print(usernames_dict)
+        agent = criar_agent(modelo_escolhido)
 
-        response = agent.run(input=str(f"é: {plataforma} {list_username}"))
+        # Chamar a IA para identificar apenas o sexo
+        response = agent.run(
+            input=f"Identifique apenas o sexo (homem, mulher, indeterminado) "
+                  f"para os seguintes usernames: {list(usernames_dict.keys())}"
+        )
 
-        df = pd.DataFrame(json.loads(response.content))
+        sexos = json.loads(response.content)
+
+        # Montar DataFrame completo
+        data = [
+            {"username": u, "link": link, "sexo": sexos.get(u, "indeterminado")}
+            for u, link in usernames_dict.items()
+        ]
+        df = pd.DataFrame(data)
+
+        # ✅ Ordenar pelo sexo: mulheres → homens → indeterminado
+        sexo_order = pd.CategoricalDtype(categories=["mulher", "homem", "indeterminado"], ordered=True)
+        df["sexo"] = df["sexo"].astype(sexo_order)
+        # Opcional: ordenar também pelo username dentro de cada sexo
+        df = df.sort_values(["sexo", "username"]).reset_index(drop=True)
 
         # Mostrar tabela
         st.subheader("📊 Resultados")
